@@ -2,17 +2,22 @@
 using System.Collections;
 
 enum Movements { XAxis = 0, YAxis = 1, XYAxis = 2, NXAxis = 3, NYAxis = 4, NXNYAxis = 5, XNYAxis = 6, NXYAxis = 7 }
+
 public class AntiViralProtein : MonoBehaviour
 {
+    Movements M;
     GameObject WaveManager;
     GameObject Player;
-    Movements M;
     bool AlwaysChasePlayer;
-    bool FlashScreen;
     bool isRotating;
     float RotateTimer;
     float MoveTimer;
-    public float Speed;
+
+    [System.NonSerialized]
+    public float patrolSpeed = .4f;
+
+    [System.NonSerialized]
+    public float chaceSpeed = .6f;
 
     void Start()
     {
@@ -20,24 +25,18 @@ public class AntiViralProtein : MonoBehaviour
         Player = WaveManager.GetComponent<WaveManager>().Player;
         M = (Movements)Random.Range(0, 7);
         AlwaysChasePlayer = false;
-        FlashScreen = false;
         isRotating = false;
         RotateTimer = 0.0f;
         MoveTimer = 0.0f;
-        Speed = .004f;
-
-        if (VirusPlayer.TutorialMode == true && WaveManager.GetComponent<WaveManager>().WaveNumber == 1)
-            Speed = 0.0f;
     }
 
     void Update()
     {
-        if (VirusPlayer.TutorialMode == true && WaveManager.GetComponent<WaveManager>().WaveNumber == 1)
+        if (GlobalVariables.tutorial == true && WaveManager.GetComponent<WaveManager>().WaveNumber == 1)
         {
             AlwaysChasePlayer = true;
-            Speed = .007f;
-            transform.LookAt(Player.transform);
-            transform.position = Vector3.MoveTowards(transform.position, Player.GetComponent<VirusPlayer>().transform.position, Speed);
+            GetComponent<Rigidbody>().MoveRotation(Quaternion.LookRotation(Player.transform.position - transform.position));
+            GetComponent<Rigidbody>().MovePosition(transform.position + (Player.GetComponent<VirusPlayer>().transform.position - transform.position) * patrolSpeed * Time.deltaTime);
         }
 
         else
@@ -52,35 +51,35 @@ public class AntiViralProtein : MonoBehaviour
                     switch (M)
                     {
                         case Movements.XAxis:
-                            transform.Rotate(.05f, 0, 0);
+                            GetComponent<Rigidbody>().AddRelativeTorque(.05f, 0, 0);
                             break;
 
                         case Movements.YAxis:
-                            transform.Rotate(0, .05f, 0);
+                            GetComponent<Rigidbody>().AddRelativeTorque(0, .05f, 0);
                             break;
 
                         case Movements.XYAxis:
-                            transform.Rotate(.05f, .05f, 0);
+                            GetComponent<Rigidbody>().AddRelativeTorque(.05f, .05f, 0);
                             break;
 
                         case Movements.NXAxis:
-                            transform.Rotate(-.05f, 0, 0);
+                            GetComponent<Rigidbody>().AddRelativeTorque(-.05f, 0, 0);
                             break;
 
                         case Movements.NYAxis:
-                            transform.Rotate(0, -.05f, 0);
+                            GetComponent<Rigidbody>().AddRelativeTorque(0, -.05f, 0);
                             break;
 
                         case Movements.NXNYAxis:
-                            transform.Rotate(-.05f, -.05f, 0);
+                            GetComponent<Rigidbody>().AddRelativeTorque(-.05f, -.05f, 0);
                             break;
 
                         case Movements.XNYAxis:
-                            transform.Rotate(.05f, -.05f, 0);
+                            GetComponent<Rigidbody>().AddRelativeTorque(.05f, -.05f, 0);
                             break;
 
                         case Movements.NXYAxis:
-                            transform.Rotate(-.05f, .05f, 0);
+                            GetComponent<Rigidbody>().AddRelativeTorque(-.05f, .05f, 0);
                             break;
                         default:
                             break;
@@ -98,9 +97,8 @@ public class AntiViralProtein : MonoBehaviour
                 else if (isRotating == false)
                 {
                     MoveTimer += Time.deltaTime;
-
-                    transform.position += transform.forward * Speed;
-                    GetComponent<Rigidbody>().velocity *= Speed;
+                    
+                    GetComponent<Rigidbody>().AddRelativeForce(new Vector3(0, 0, 1) * patrolSpeed);
 
                     if (MoveTimer >= 5.5f)
                     {
@@ -113,8 +111,8 @@ public class AntiViralProtein : MonoBehaviour
             else if (AlwaysChasePlayer == true)
             {
                 //Chase the player
-                transform.LookAt(Player.GetComponent<VirusPlayer>().transform.position);
-                transform.position = Vector3.MoveTowards(transform.position, Player.GetComponent<VirusPlayer>().transform.position, Speed);
+                GetComponent<Rigidbody>().MoveRotation(Quaternion.LookRotation(Player.transform.position - transform.position));
+                GetComponent<Rigidbody>().MovePosition(transform.position + (Player.GetComponent<VirusPlayer>().transform.position - transform.position) * chaceSpeed * Time.deltaTime);
             }
 
         }
@@ -135,29 +133,26 @@ public class AntiViralProtein : MonoBehaviour
 
     public bool CheckFOV()
     {
-        if (Vector3.Angle(Player.transform.position - transform.position, transform.forward) <= 35 && FlashScreen == false && Vector3.Distance(transform.position, Player.transform.position) <= 5.0f)
+        if (Player != null && Vector3.Angle(Player.transform.position - transform.position, transform.forward) <= 35 && Vector3.Distance(transform.position, Player.transform.position) <= 5.0f)
         {
-            Debug.Log("Can See Player");
             AlwaysChasePlayer = true;
-            FlashScreen = true;
             return true;
         }
+
         return false;
     }
 
     void OnCollisionEnter(Collision c)
     {
-        if (c.gameObject.tag == "MainCamera" && AlwaysChasePlayer == true)
+        if (c.gameObject.tag == "Player" && AlwaysChasePlayer == true)
         {
             Destroy(gameObject);
             Player.GetComponent<VirusPlayer>().Lives -= 1;
             Player.GetComponent<VirusPlayer>().Respawn();
-        }
+            Player.GetComponent<VirusPlayer>().CurrentScore -= 300;
 
-        //Possibly colliding with the wall so maybe make it head the opposite way
-        else
-        {
-
+            if (Player.GetComponent<VirusPlayer>().CurrentScore <= 0)
+                Player.GetComponent<VirusPlayer>().CurrentScore = 0;
         }
     }
 }

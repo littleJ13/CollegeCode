@@ -16,33 +16,36 @@ public class BulletManager : MonoBehaviour
     int ChangeProtein;
     public bool CanIShoot = false;
 
+    private bool last = false;
+
     void Start()
     {
         isTriggered = true;
         Time = 0;
         ChangeProtein = 0;
 
-        if (Player.TutorialMode == false)
+        if (GlobalVariables.tutorial == false)
             isTriggered = true;
         
-        else if (Player.TutorialMode == true)
+        else if (GlobalVariables.tutorial == true)
             isTriggered = false;
     }
 
     void Update()
     {
-        if (Player.TutorialMode == false)
+        bool held = Input.GetButton("Fire1");
+        if (GlobalVariables.tutorial == false)
         {
             //Bullet Delay
             Time += UnityEngine.Time.deltaTime;
-            if (isTriggered == true && Time >= .2f)
+            if (isTriggered == true && Time >= .5f)
             {
                 Time = 0.0f;
                 StartShooting();
             }
 
             //Checking for button input
-            if (GvrViewer.Instance.Triggered)
+            if (held && !last)
                 isTriggered = !isTriggered;
 
             //Gameover stop shooting
@@ -51,18 +54,19 @@ public class BulletManager : MonoBehaviour
         }
 
         //For tutorial mode dont have them shoot unless directed to
-        else if (Player.TutorialMode == true && CanIShoot == true)
+        else if (CanIShoot == true)
         {
             Time += UnityEngine.Time.deltaTime;
-            if (isTriggered == true && Time >= .2f)
+            if (isTriggered == true && Time >= .5f)
             {
                 Time = 0.0f;
                 StartShooting();
             }
 
-            if (GvrViewer.Instance.Triggered)
+            if (held && !last)
                 isTriggered = !isTriggered;
         }
+        last = held;
     }
 
     void StartShooting()
@@ -89,6 +93,7 @@ public class BulletManager : MonoBehaviour
                 break;
         }
 
+        SoundManager.PlaySFX("StrategyGame/link3");
         ChangeProtein += 1;
 
         if (ChangeProtein >= 4)
